@@ -1,0 +1,10 @@
+work/
+.nextflow/
+.nextflow.log*
+data/
+*.bam
+*.bai
+*.fastq.gz
+*.fq.gz
+*.sam
+results/
