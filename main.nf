@@ -32,10 +32,10 @@ workflow {
     preprocessReads(reads_ch)
 
     // Index reference (reuse if already exists)
-    index_path = file("${params.outdir}/genome_index")
+    index_path = file("${params.outdir}/genome_index/hisat2_index")
 
     if (index_path.exists()) {
-        index_ch = Channel.value(index_path)
+    index_ch = Channel.value(index_path)
     } else {
         indexReference(Channel.fromPath(params.genome))
         index_ch = indexReference.out.index_dir
