@@ -31,23 +31,30 @@ workflow {
     // Preprocess reads
     preprocessReads(reads_ch)
 
-    // Index reference (reuse if already exists)
+      // Step 3 — Index reference (reuse if already exists)
     genome_file   = file(params.genome)
     genome_dir    = genome_file.parent
     genome_prefix = genome_file.simpleName
 
     index_exists = file("${genome_dir}/${genome_prefix}.1.ht2").exists()
 
+    ref_dir_ch = Channel.value(genome_dir)
+
     if (!index_exists) {
-        indexReference(Channel.value(genome_dir), genome_prefix)
+        indexReference(ref_dir_ch, genome_prefix)
         ready_ch = indexReference.out.done
     } else {
         ready_ch = Channel.value(true)
     }
 
-    // Align (waits for index to be ready)
-    align(preprocessReads.out.reads, ready_ch, genome_dir, genome_prefix)
+    // Merge ref_dir with ready signal, then select only the Path
+    ready_ref_ch = ref_dir_ch
+        .mix(ready_ch)
+        .filter { it instanceof java.nio.file.Path }
 
+    // Step 4 — Align
+    align(preprocessReads.out.reads.combine(ready_ref_ch), genome_prefix)
+    
     //  Flagstat
     flagstat(align.out.bam)
 

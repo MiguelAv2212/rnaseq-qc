@@ -4,9 +4,7 @@ process align {
     container 'bioit-sample-processing:latest'
 
     input:
-    tuple val(meta), path(fastq_1), path(fastq_2)
-    val index_ready
-    path ref_dir
+    tuple val(meta), path(fastq_1), path(fastq_2), path(ref_dir)
     val genome_prefix
 
     output:
