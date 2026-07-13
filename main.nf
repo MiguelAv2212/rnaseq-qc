@@ -32,7 +32,7 @@ workflow {
     preprocessReads(reads_ch)
 
     // Step 3 — Index reference (once)
-    indexReference(file(params.genome))
+    indexReference(Channel.value(file(params.genome)))
 
     // Step 4 — Align
     align(preprocessReads.out.reads, indexReference.out.index_dir)
