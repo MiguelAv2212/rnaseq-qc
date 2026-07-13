@@ -47,14 +47,14 @@ workflow {
         ready_ch = Channel.value(true)
     }
 
-    // Merge ref_dir with ready signal, then select only the Path
+    // Merge ref_dir with ready signal — ref_dir only emits after index is ready
     ready_ref_ch = ref_dir_ch
-        .mix(ready_ch)
-        .filter { it instanceof java.nio.file.Path }
+        .merge(ready_ch)
+        .map { ref, ready -> ref }
 
     // Step 4 — Align
     align(preprocessReads.out.reads.combine(ready_ref_ch), genome_prefix)
-    
+
     //  Flagstat
     flagstat(align.out.bam)
 
