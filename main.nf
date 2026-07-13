@@ -32,17 +32,21 @@ workflow {
     preprocessReads(reads_ch)
 
     // Index reference (reuse if already exists)
-    index_path = file("${params.outdir}/genome_index/hisat2_index")
+    genome_file   = file(params.genome)
+    genome_dir    = genome_file.parent
+    genome_prefix = genome_file.simpleName
 
-    if (index_path.exists()) {
-    index_ch = Channel.value(index_path)
+    index_exists = file("${genome_dir}/${genome_prefix}.1.ht2").exists()
+
+    if (!index_exists) {
+        indexReference(Channel.value(genome_dir), genome_prefix)
+        ready_ch = indexReference.out.done
     } else {
-        indexReference(Channel.fromPath(params.genome))
-        index_ch = indexReference.out.index_dir
+        ready_ch = Channel.value(true)
     }
 
-    // Align
-    align(preprocessReads.out.reads, index_ch)
+    // Align (waits for index to be ready)
+    align(preprocessReads.out.reads, ready_ch, genome_dir, genome_prefix)
 
     //  Flagstat
     flagstat(align.out.bam)
@@ -81,7 +85,7 @@ workflow {
     sample_reports = generateSampleReport.out.report
     cohort_summary = makeSummary.out.summary
     multiqc_report = multiQC.out.report
-    genome_index   = index_ch
+    
 }
 
 output {
@@ -103,7 +107,5 @@ output {
     multiqc_report {
         path 'multiqc'
     }
-    genome_index {
-        path 'genome_index'
-    }
+    
 }
