@@ -4,8 +4,8 @@ process align {
     container 'bioit-sample-processing:latest'
 
     input:
-    tuple val(meta), path(fastq_1), path(fastq_2)
-    path index_dir
+    tuple val(meta), path(fastq_1), path(fastq_2), path(ref_dir)
+    val genome_prefix
 
     output:
     tuple val(meta), path("${meta.id}.sorted.bam"), path("${meta.id}.sorted.bam.bai"), emit: bam
@@ -14,7 +14,7 @@ process align {
     script:
     """
     hisat2 \
-        -x ${index_dir}/genome \
+        -x ${ref_dir}/${genome_prefix} \
         -1 ${fastq_1} \
         -2 ${fastq_2} \
         -p ${task.cpus} \

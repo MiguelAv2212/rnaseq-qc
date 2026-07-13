@@ -25,19 +25,37 @@ workflow {
         .splitCsv(header: true)
         .map { row -> tuple([id: row.sample], file(row.fastq_1), file(row.fastq_2)) }
 
-    // Step 1 — Validate inputs
+    // Validate inputs
     validateInputs(reads_ch)
 
-    // Step 2 — Preprocess reads
+    // Preprocess reads
     preprocessReads(reads_ch)
 
-    // Step 3 — Index reference (once)
-    indexReference(file(params.genome))
+      // Step 3 — Index reference (reuse if already exists)
+    genome_file   = file(params.genome)
+    genome_dir    = genome_file.parent
+    genome_prefix = genome_file.simpleName
+
+    index_exists = file("${genome_dir}/${genome_prefix}.1.ht2").exists()
+
+    ref_dir_ch = Channel.value(genome_dir)
+
+    if (!index_exists) {
+        indexReference(ref_dir_ch, genome_prefix)
+        ready_ch = indexReference.out.done
+    } else {
+        ready_ch = Channel.value(true)
+    }
+
+    // Merge ref_dir with ready signal — ref_dir only emits after index is ready
+    ready_ref_ch = ref_dir_ch
+        .merge(ready_ch)
+        .map { ref, ready -> ref }
 
     // Step 4 — Align
-    align(preprocessReads.out.reads, indexReference.out.index_dir)
+    align(preprocessReads.out.reads.combine(ready_ref_ch), genome_prefix)
 
-    // Step 5 — Flagstat
+    //  Flagstat
     flagstat(align.out.bam)
 
     // Combine metrics for per-sample report
@@ -48,17 +66,17 @@ workflow {
             tuple(meta, fastp_json, flagstat_txt, r1_stats, r2_stats)
         }
 
-    // Step 6 — Per-sample report
+    //  Per-sample report
     generateSampleReport(
         report_ch,
         params.min_retained_percentage,
         params.min_mapped_percentage
     )
 
-    // Step 7 — Cohort summary
+    // Cohort summary
     makeSummary(generateSampleReport.out.report.toList())
 
-    // Step 8 — MultiQC
+    //  MultiQC
     multiqc_files = preprocessReads.out.json.map { meta, f -> f }
         .mix(preprocessReads.out.log.map  { meta, f -> f })
         .mix(align.out.log.map            { meta, f -> f })
@@ -74,6 +92,7 @@ workflow {
     sample_reports = generateSampleReport.out.report
     cohort_summary = makeSummary.out.summary
     multiqc_report = multiQC.out.report
+    
 }
 
 output {
@@ -95,4 +114,5 @@ output {
     multiqc_report {
         path 'multiqc'
     }
+    
 }

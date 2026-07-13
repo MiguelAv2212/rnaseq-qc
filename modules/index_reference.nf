@@ -4,17 +4,17 @@ process indexReference {
     container 'bioit-sample-processing:latest'
 
     input:
-    path genome_fa
+    path ref_dir
+    val genome_prefix
 
     output:
-    path "hisat2_index", emit: index_dir
+    val true, emit: done
 
     script:
     """
-    mkdir -p hisat2_index
     hisat2-build \
         -p ${task.cpus} \
-        ${genome_fa} \
-        hisat2_index/genome
+        ${ref_dir}/${genome_prefix}.fa \
+        ${ref_dir}/${genome_prefix}
     """
 }
