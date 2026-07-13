@@ -25,19 +25,26 @@ workflow {
         .splitCsv(header: true)
         .map { row -> tuple([id: row.sample], file(row.fastq_1), file(row.fastq_2)) }
 
-    // Step 1 — Validate inputs
+    // Validate inputs
     validateInputs(reads_ch)
 
-    // Step 2 — Preprocess reads
+    // Preprocess reads
     preprocessReads(reads_ch)
 
-    // Step 3 — Index reference (once)
-    indexReference(Channel.value(file(params.genome)))
+    // Index reference (reuse if already exists)
+    index_path = file("${params.outdir}/genome_index")
 
-    // Step 4 — Align
-    align(preprocessReads.out.reads, indexReference.out.index_dir)
+    if (index_path.exists()) {
+        index_ch = Channel.value(index_path)
+    } else {
+        indexReference(Channel.fromPath(params.genome))
+        index_ch = indexReference.out.index_dir
+    }
 
-    // Step 5 — Flagstat
+    // Align
+    align(preprocessReads.out.reads, index_ch)
+
+    //  Flagstat
     flagstat(align.out.bam)
 
     // Combine metrics for per-sample report
@@ -48,17 +55,17 @@ workflow {
             tuple(meta, fastp_json, flagstat_txt, r1_stats, r2_stats)
         }
 
-    // Step 6 — Per-sample report
+    //  Per-sample report
     generateSampleReport(
         report_ch,
         params.min_retained_percentage,
         params.min_mapped_percentage
     )
 
-    // Step 7 — Cohort summary
+    // Cohort summary
     makeSummary(generateSampleReport.out.report.toList())
 
-    // Step 8 — MultiQC
+    //  MultiQC
     multiqc_files = preprocessReads.out.json.map { meta, f -> f }
         .mix(preprocessReads.out.log.map  { meta, f -> f })
         .mix(align.out.log.map            { meta, f -> f })
@@ -74,6 +81,7 @@ workflow {
     sample_reports = generateSampleReport.out.report
     cohort_summary = makeSummary.out.summary
     multiqc_report = multiQC.out.report
+    genome_index   = index_ch
 }
 
 output {
@@ -94,5 +102,8 @@ output {
     }
     multiqc_report {
         path 'multiqc'
+    }
+    genome_index {
+        path 'genome_index'
     }
 }
