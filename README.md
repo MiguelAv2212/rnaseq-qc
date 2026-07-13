@@ -41,6 +41,7 @@ nextflow run main.nf \
 ## Reproducibility test
 
 Run twice with `-resume` to confirm caching:
+
 ```bash
 nextflow run main.nf -profile docker --input samplesheet.csv \
     --genome data/genome.fa --outdir results \
@@ -48,6 +49,7 @@ nextflow run main.nf -profile docker --input samplesheet.csv \
 ```
 
 Change only the mapped threshold — upstream steps remain cached:
+
 ```bash
 nextflow run main.nf -profile docker --input samplesheet.csv \
     --genome data/genome.fa --outdir results \
@@ -55,6 +57,9 @@ nextflow run main.nf -profile docker --input samplesheet.csv \
 ```
 
 ## Results directory tree
+
+```
+
 results/
 ├── cohort_summary.tsv
 ├── multiqc/
@@ -79,7 +84,17 @@ results/
 └── reports/
 ├── ENCSR000COQ1.report.tsv
 ├── ENCSR000COR1.report.tsv
-└── ENCSR000CPO1.report.tsv## Samplesheet format
+└── ENCSR000CPO1.report.tsv
+```
+
+## Execution reports
+
+Pre-generated execution reports are available in `pipeline_info/`:
+- `execution_report_min-retained-90.html` — full task execution report
+- `execution_timeline.html` — timeline of task execution
+- `workflow_dag.html` — pipeline DAG visualization
+
+## Samplesheet format
 
 ```csv
 sample,fastq_1,fastq_2
